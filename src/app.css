@@ -131,30 +131,3 @@ p {
   color: var(--muted);
   margin: 0 0 4px;
 }
-
-/* ---------- Startbildschirm (Phase 1 Platzhalter) ---------- */
-
-main.placeholder {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-}
-
-main.placeholder .logo {
-  width: 120px;
-  height: auto;
-}
-
-main.placeholder h1 {
-  font-size: 1.5rem;
-}
-
-main.placeholder p {
-  color: var(--muted);
-  max-width: 32ch;
-}
