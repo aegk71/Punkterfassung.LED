@@ -84,5 +84,11 @@ export const texte = {
     keinePunkte: 'Noch keine Punkte erfasst.',
     wiederherstellen: 'Wiederherstellen',
     fotos: 'Fotos',
+    export: 'Export',
+    exportAuswahlFrage: 'Welche Punkte exportieren?',
+    exportAlle: 'Alle Punkte',
+    exportOffenBearbeitung: 'Nur offen + in Bearbeitung',
+    exportStarten: 'Exportieren',
+    exportLaeuft: 'Export läuft …',
   },
 } as const;

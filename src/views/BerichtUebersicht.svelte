@@ -1,8 +1,11 @@
 <script lang="ts">
   import { db, punktWiederherstellen } from '../lib/db';
-  import type { Bericht, Punkt } from '../lib/model';
+  import type { Bericht, Foto, Punkt } from '../lib/model';
   import { texte } from '../lib/texte/de';
   import { naturalCompare } from '../lib/naturalSort';
+  import { heuteIso } from '../lib/datum';
+  import { exportDateiname } from '../lib/export/dateiname';
+  import { dateiBereitstellen } from '../lib/export/teilen';
   import ZiffernblattSymbol from '../components/ZiffernblattSymbol.svelte';
 
   let { berichtId, onZurueck, onBearbeiten, onNeuerPunkt, onPunktOeffnen }: {
@@ -18,6 +21,7 @@
   let bericht = $state<Bericht | null>(null);
   let punkte = $state<Punkt[]>([]);
   let fotosProPunkt = $state<Record<string, number>>({});
+  let alleFotosProPunkt = new Map<string, Foto[]>();
   let filter = $state<Filter>('alle');
   let geladen = $state(false);
 
@@ -31,8 +35,15 @@
     punkte = alleP;
 
     const zaehler: Record<string, number> = {};
-    for (const f of alleF) zaehler[f.punktId] = (zaehler[f.punktId] ?? 0) + 1;
+    const gruppiert = new Map<string, Foto[]>();
+    for (const f of alleF) {
+      zaehler[f.punktId] = (zaehler[f.punktId] ?? 0) + 1;
+      const liste = gruppiert.get(f.punktId) ?? [];
+      liste.push(f);
+      gruppiert.set(f.punktId, liste);
+    }
     fotosProPunkt = zaehler;
+    alleFotosProPunkt = gruppiert;
 
     geladen = true;
   }
@@ -78,6 +89,47 @@
     if (punkt.geloescht) return texte.status.geloescht;
     return texte.status[punkt.status];
   }
+
+  type ExportAuswahl = 'alle' | 'offen_bearbeitung';
+  let exportSichtbar = $state(false);
+  let exportAuswahl = $state<ExportAuswahl>('alle');
+  let exportLaeuft = $state(false);
+  let exportFehler = $state('');
+
+  function exportStarten() {
+    exportSichtbar = true;
+    exportFehler = '';
+  }
+
+  function exportAbbrechen() {
+    exportSichtbar = false;
+  }
+
+  async function exportAusfuehren() {
+    if (!bericht) return;
+    exportLaeuft = true;
+    exportFehler = '';
+    try {
+      const punkteFuerExport =
+        exportAuswahl === 'alle'
+          ? punkte
+          : punkte.filter((p) => !p.geloescht && (p.status === 'offen' || p.status === 'in_bearbeitung'));
+
+      const { berichtAlsExcel } = await import('../lib/export/excel');
+      const blob = await berichtAlsExcel(bericht, punkteFuerExport, alleFotosProPunkt);
+      const dateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'xlsx');
+      await dateiBereitstellen(
+        blob,
+        dateiname,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      exportSichtbar = false;
+    } catch (err) {
+      exportFehler = err instanceof Error ? err.message : 'Export fehlgeschlagen.';
+    } finally {
+      exportLaeuft = false;
+    }
+  }
 </script>
 
 <div class="page">
@@ -96,7 +148,35 @@
       <button class="btn btn-secondary btn-klein" onclick={statusUmschalten}>
         {bericht.status === 'offen' ? texte.berichtUebersicht.abschliessen : texte.berichtUebersicht.wiederEroeffnen}
       </button>
+      <button class="btn btn-secondary btn-klein" onclick={exportStarten}>
+        {texte.berichtUebersicht.export}
+      </button>
     </div>
+
+    {#if exportSichtbar}
+      <div class="card export-block">
+        <p class="export-frage">{texte.berichtUebersicht.exportAuswahlFrage}</p>
+        <label class="export-option">
+          <input type="radio" name="export-auswahl" value="alle" bind:group={exportAuswahl} />
+          {texte.berichtUebersicht.exportAlle}
+        </label>
+        <label class="export-option">
+          <input type="radio" name="export-auswahl" value="offen_bearbeitung" bind:group={exportAuswahl} />
+          {texte.berichtUebersicht.exportOffenBearbeitung}
+        </label>
+        {#if exportFehler}
+          <p class="fehler">{exportFehler}</p>
+        {/if}
+        <div class="export-aktionen">
+          <button class="btn btn-secondary" onclick={exportAbbrechen} disabled={exportLaeuft}>
+            {texte.berichtForm.abbrechen}
+          </button>
+          <button class="btn btn-primary" onclick={exportAusfuehren} disabled={exportLaeuft}>
+            {exportLaeuft ? texte.berichtUebersicht.exportLaeuft : texte.berichtUebersicht.exportStarten}
+          </button>
+        </div>
+      </div>
+    {/if}
 
     <div class="filter-leiste">
       <button class="filter-btn" class:aktiv={filter === 'alle'} onclick={() => (filter = 'alle')}>
@@ -180,6 +260,42 @@
     gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 16px;
+  }
+
+  .export-block {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .export-frage {
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .export-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--ink);
+  }
+
+  .export-aktionen {
+    display: flex;
+    gap: 10px;
+  }
+
+  .export-aktionen .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .fehler {
+    color: var(--status-offen);
+    font-weight: 600;
+    margin: 0;
   }
 
   .btn-klein {
