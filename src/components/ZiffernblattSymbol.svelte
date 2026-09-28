@@ -1,25 +1,29 @@
 <script lang="ts">
   import type { Lage } from '../lib/model';
-  import { polarZuXY } from '../lib/kreis';
-  import { lageWinkel } from '../lib/lage';
+  import { tuerSegment, segmentMitte } from '../lib/tuer';
 
-  let { lage, groesse = 26 }: { lage: Lage; groesse?: number } = $props();
+  let { lage, groesse = 22 }: { lage: Lage; groesse?: number } = $props();
 
-  const cx = 16;
-  const cy = 16;
-  const r = 13;
+  const breite = 20;
+  const hoehe = 28;
+  const rahmen = 6;
 
-  let winkel = $derived(lageWinkel(lage));
-  let punkt = $derived(polarZuXY(cx, cy, r - 3, winkel));
+  let mitte = $derived(segmentMitte(tuerSegment(lage, breite, hoehe, rahmen)));
 </script>
 
-<svg viewBox="0 0 32 32" width={groesse} height={groesse} class="symbol" aria-hidden="true">
-  <circle cx={cx} cy={cy} r={r} class="ring" />
-  <line x1={cx} y1={cy - r} x2={cx} y2={cy - r + 3} class="marke" />
+<svg
+  viewBox={`0 0 ${breite} ${hoehe}`}
+  width={groesse}
+  height={(groesse * hoehe) / breite}
+  class="symbol"
+  aria-hidden="true"
+>
+  <rect x="0" y="0" width={breite} height={hoehe} class="rahmen-aussen" />
+  <rect x={rahmen} y={rahmen} width={breite - 2 * rahmen} height={hoehe - 2 * rahmen} class="panel" />
   {#if lage === 'M'}
-    <circle cx={cx} cy={cy} r="4" class="punkt" />
+    <circle cx={breite / 2} cy={hoehe / 2} r="2.5" class="punkt" />
   {:else}
-    <circle cx={punkt.x} cy={punkt.y} r="3" class="punkt" />
+    <circle cx={mitte.x} cy={mitte.y} r="2" class="punkt" />
   {/if}
 </svg>
 
@@ -28,15 +32,17 @@
     flex: 0 0 auto;
   }
 
-  .ring {
+  .rahmen-aussen {
     fill: none;
     stroke: var(--muted);
-    stroke-width: 1.5;
+    stroke-width: 1.2;
   }
 
-  .marke {
+  .panel {
+    fill: none;
     stroke: var(--muted);
-    stroke-width: 1.5;
+    stroke-width: 0.8;
+    opacity: 0.5;
   }
 
   .punkt {

@@ -1,35 +1,34 @@
 <script lang="ts">
   import type { Lage } from '../lib/model';
-  import { segmentPfad, polarZuXY } from '../lib/kreis';
+  import { tuerSegment, segmentMitte } from '../lib/tuer';
   import { lageText } from '../lib/lage';
 
   let { value = $bindable(null) }: { value: Lage | null } = $props();
 
-  const cx = 130;
-  const cy = 130;
-  const aussenR = 118;
-  const innenR = 46;
+  const breite = 170;
+  const hoehe = 250;
+  const rahmen = 42;
   const zahlen: Lage[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  function mittelwinkel(n: Lage): number {
-    if (n === 'M') return 0;
-    return (n % 12) * 30;
-  }
+  const mSeg = tuerSegment('M', breite, hoehe, rahmen);
+  const mMitte = segmentMitte(mSeg);
 
   function waehlen(lage: Lage) {
     value = lage;
   }
 </script>
 
-<div class="ziffernblatt-wrapper">
-  <svg viewBox="0 0 260 260" class="ziffernblatt">
+<div class="tuer-wrapper">
+  <svg viewBox={`0 0 ${breite} ${hoehe}`} class="tuer">
     {#each zahlen as n (n)}
-      {@const winkel = mittelwinkel(n)}
-      {@const pfad = segmentPfad(cx, cy, innenR, aussenR, winkel - 15, winkel + 15)}
-      {@const label = polarZuXY(cx, cy, (innenR + aussenR) / 2, winkel)}
-      <path
-        d={pfad}
-        class="sektor"
+      {@const seg = tuerSegment(n, breite, hoehe, rahmen)}
+      {@const mitte = segmentMitte(seg)}
+      <rect
+        x={seg.x}
+        y={seg.y}
+        width={seg.breite}
+        height={seg.hoehe}
+        class="segment"
         class:aktiv={value === n}
         role="button"
         tabindex="0"
@@ -37,12 +36,13 @@
         onclick={() => waehlen(n)}
         onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && waehlen(n)}
       />
-      <text x={label.x} y={label.y} class="sektor-label" class:aktiv={value === n}>{n}</text>
+      <text x={mitte.x} y={mitte.y} class="segment-label" class:aktiv={value === n}>{n}</text>
     {/each}
-    <circle
-      cx={cx}
-      cy={cy}
-      r={innenR}
+    <rect
+      x={mSeg.x}
+      y={mSeg.y}
+      width={mSeg.breite}
+      height={mSeg.hoehe}
       class="mitte"
       class:aktiv={value === 'M'}
       role="button"
@@ -51,39 +51,39 @@
       onclick={() => waehlen('M')}
       onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && waehlen('M')}
     />
-    <text x={cx} y={cy} class="mitte-label" class:aktiv={value === 'M'}>M</text>
+    <text x={mMitte.x} y={mMitte.y} class="mitte-label" class:aktiv={value === 'M'}>M</text>
   </svg>
   <p class="hinweis">Ansicht von außen nach innen</p>
   <p class="wert">{value ? lageText(value) : 'Bitte auswählen'}</p>
 </div>
 
 <style>
-  .ziffernblatt-wrapper {
+  .tuer-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
   }
 
-  .ziffernblatt {
+  .tuer {
     width: 100%;
-    max-width: 260px;
+    max-width: 200px;
     touch-action: manipulation;
   }
 
-  .sektor {
+  .segment {
     fill: var(--card);
     stroke: var(--line);
     stroke-width: 1;
     cursor: pointer;
   }
 
-  .sektor.aktiv {
+  .segment.aktiv {
     fill: var(--navy);
   }
 
-  .sektor-label {
-    font-size: 18px;
+  .segment-label {
+    font-size: 16px;
     font-weight: 600;
     fill: var(--ink);
     text-anchor: middle;
@@ -91,7 +91,7 @@
     pointer-events: none;
   }
 
-  .sektor-label.aktiv {
+  .segment-label.aktiv {
     fill: #fff;
   }
 

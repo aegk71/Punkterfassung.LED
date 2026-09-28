@@ -1,6 +1,6 @@
 <script lang="ts">
   import { db, ladeEinstellungen, punktLoeschen } from '../lib/db';
-  import type { Baugruppe, Lage, Punkt, PunktStatus } from '../lib/model';
+  import type { Baugruppe, Bericht, Lage, Punkt, PunktStatus } from '../lib/model';
   import { texte } from '../lib/texte/de';
   import Ziffernblatt from '../components/Ziffernblatt.svelte';
 
@@ -16,6 +16,8 @@
   let ersteller = '';
   let baugruppenAktiv = $state<Baugruppe[]>([]);
   let bestehenderPunkt: Punkt | null = null;
+  let bericht = $state<Bericht | null>(null);
+  let anzeigeNr = $state<number | null>(null);
 
   let anlageNr = $state('');
   let lage = $state<Lage | null>(null);
@@ -29,11 +31,15 @@
   let vollstaendig = $derived(anlageNr.trim() !== '' && lage !== null && baugruppeId !== '');
 
   async function laden() {
-    const einstellungen = await ladeEinstellungen();
+    const [einstellungen, berichtGeladen] = await Promise.all([
+      ladeEinstellungen(),
+      db.berichte.get(berichtId),
+    ]);
     ersteller = einstellungen.ersteller;
     baugruppenAktiv = einstellungen.baugruppen
       .filter((b) => b.aktiv)
       .sort((a, b) => a.sortierung - b.sortierung);
+    bericht = berichtGeladen ?? null;
 
     if (punktId) {
       const punkt = await db.punkte.get(punktId);
@@ -44,11 +50,13 @@
         baugruppeId = punkt.baugruppeId;
         anmerkung = punkt.anmerkung ?? '';
         status = punkt.status;
+        anzeigeNr = punkt.nr;
       }
     } else {
       const vorherigePunkte = await db.punkte.where('berichtId').equals(berichtId).toArray();
       vorherigePunkte.sort((a, b) => b.nr - a.nr);
       anlageNr = vorherigePunkte[0]?.anlageNr ?? '';
+      anzeigeNr = bericht?.naechstePunktNr ?? null;
     }
     geladen = true;
   }
@@ -71,11 +79,13 @@
     const baugruppe = baugruppenAktiv.find((b) => b.id === baugruppeId);
     const jetzt = new Date().toISOString();
     const lageWert = lage;
+    let vergebeneNr: number | null = null;
 
     await db.transaction('rw', db.berichte, db.punkte, async () => {
-      const bericht = await db.berichte.get(berichtId);
-      if (!bericht) return;
-      const nr = bericht.naechstePunktNr;
+      const berichtAktuell = await db.berichte.get(berichtId);
+      if (!berichtAktuell) return;
+      const nr = berichtAktuell.naechstePunktNr;
+      vergebeneNr = nr;
 
       const neuerPunkt: Punkt = {
         id: crypto.randomUUID(),
@@ -94,11 +104,12 @@
 
       await db.punkte.put(neuerPunkt);
 
-      bericht.naechstePunktNr = nr + 1;
-      bericht.geaendertAm = jetzt;
-      await db.berichte.put(bericht);
+      berichtAktuell.naechstePunktNr = nr + 1;
+      berichtAktuell.geaendertAm = jetzt;
+      await db.berichte.put(berichtAktuell);
     });
 
+    if (vergebeneNr !== null) anzeigeNr = vergebeneNr + 1;
     return true;
   }
 
@@ -167,7 +178,17 @@
     <button class="btn btn-secondary" onclick={onFertig}>
       {modusBearbeiten ? texte.punktForm.abbrechen : texte.punktForm.fertig}
     </button>
-    <h1>{modusBearbeiten ? texte.punktForm.titelBearbeiten : texte.punktForm.titelNeu}</h1>
+    <div class="titel-block">
+      <h1>{modusBearbeiten ? texte.punktForm.titelBearbeiten : texte.punktForm.titelNeu}</h1>
+      {#if bericht}
+        <p class="kontext">
+          {bericht.projektNr} · {bericht.projektName}
+          {#if anzeigeNr !== null}
+            · Punkt #{anzeigeNr}
+          {/if}
+        </p>
+      {/if}
+    </div>
   </header>
 
   {#if geladen}
@@ -247,12 +268,29 @@
   .page-head {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 20px;
+  }
+
+  .page-head .btn {
+    flex: 0 0 auto;
+  }
+
+  .titel-block {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .page-head h1 {
     font-size: 20px;
+    overflow-wrap: break-word;
+  }
+
+  .kontext {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+    overflow-wrap: break-word;
   }
 
   .formular {
