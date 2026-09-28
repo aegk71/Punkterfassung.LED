@@ -18,8 +18,8 @@ export default defineConfig({
         start_url: '/Punkterfassung.LED/',
         scope: '/Punkterfassung.LED/',
         display: 'standalone',
-        background_color: '#f5f5f4',
-        theme_color: '#1c1c1c',
+        background_color: '#f6f7f9',
+        theme_color: '#143868',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
