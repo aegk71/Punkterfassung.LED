@@ -175,7 +175,7 @@
 
   .baugruppe-zeile {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 10px;
   }
 
@@ -184,12 +184,13 @@
   }
 
   .baugruppe-name {
-    flex: 1 1 auto;
+    width: 100%;
     min-width: 0;
-    border: none;
-    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--card);
     font-weight: 600;
-    padding: 8px 0;
+    padding: 0 12px;
     min-height: 44px;
   }
 
@@ -197,7 +198,10 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 0 0 auto;
+  }
+
+  .baugruppe-aktionen .btn-klein {
+    margin-left: auto;
   }
 
   .btn-icon {
@@ -223,5 +227,6 @@
 
   .neu-zeile input {
     flex: 1 1 auto;
+    min-width: 0;
   }
 </style>
