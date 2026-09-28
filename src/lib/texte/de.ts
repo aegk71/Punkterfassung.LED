@@ -56,6 +56,8 @@ export const texte = {
     lage: 'Lage',
     baugruppe: 'Baugruppe',
     baugruppeBitteWaehlen: '-- Baugruppe wählen --',
+    fotos: 'Fotos',
+    fotoAufnehmen: 'Foto',
     anmerkung: 'Anmerkung',
     status: 'Status',
     speichernNaechster: 'Speichern & nächster Punkt',

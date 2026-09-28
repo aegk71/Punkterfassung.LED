@@ -84,7 +84,7 @@
   <header class="page-head">
     <button class="btn btn-secondary" onclick={onZurueck}>{texte.berichtUebersicht.zurueck}</button>
     {#if bericht}
-      <h1>{bericht.projektNr} · {bericht.vorgang}</h1>
+      <h1>{bericht.projektNr} · {bericht.projektName} · {bericht.vorgang}</h1>
     {/if}
   </header>
 
@@ -172,6 +172,7 @@
     font-size: 18px;
     flex: 1 1 auto;
     min-width: 0;
+    overflow-wrap: break-word;
   }
 
   .unterzeile {
