@@ -21,6 +21,22 @@ export class AppDatabase extends Dexie {
 
 export const db = new AppDatabase();
 
+export async function punktLoeschen(punktId: string, ersteller: string, grund?: string): Promise<void> {
+  const punkt = await db.punkte.get(punktId);
+  if (!punkt) return;
+  punkt.geloescht = { am: new Date().toISOString(), durch: ersteller, grund: grund || undefined };
+  punkt.geaendertAm = new Date().toISOString();
+  await db.punkte.put(punkt);
+}
+
+export async function punktWiederherstellen(punktId: string): Promise<void> {
+  const punkt = await db.punkte.get(punktId);
+  if (!punkt) return;
+  delete punkt.geloescht;
+  punkt.geaendertAm = new Date().toISOString();
+  await db.punkte.put(punkt);
+}
+
 export async function ladeEinstellungen(): Promise<Einstellungen> {
   const bestehend = await db.einstellungen.get('global');
   if (bestehend) return bestehend;
