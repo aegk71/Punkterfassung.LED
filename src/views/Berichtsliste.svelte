@@ -146,7 +146,7 @@
     position: fixed;
     left: 16px;
     right: 16px;
-    bottom: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
     max-width: 608px;
     margin: 0 auto;
   }
