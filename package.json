@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "dexie": "^4.4.6",
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "jspdf": "^4.2.1"
   }
 }

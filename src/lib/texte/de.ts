@@ -88,7 +88,8 @@ export const texte = {
     exportAuswahlFrage: 'Welche Punkte exportieren?',
     exportAlle: 'Alle Punkte',
     exportOffenBearbeitung: 'Nur offen + in Bearbeitung',
-    exportStarten: 'Exportieren',
+    exportExcel: 'Als Excel',
+    exportPdf: 'Als PDF',
     exportLaeuft: 'Export läuft …',
   },
 } as const;

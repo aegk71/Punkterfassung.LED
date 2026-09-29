@@ -105,7 +105,7 @@
     exportSichtbar = false;
   }
 
-  async function exportAusfuehren() {
+  async function exportAusfuehren(format: 'excel' | 'pdf') {
     if (!bericht) return;
     exportLaeuft = true;
     exportFehler = '';
@@ -115,14 +115,21 @@
           ? punkte
           : punkte.filter((p) => !p.geloescht && (p.status === 'offen' || p.status === 'in_bearbeitung'));
 
-      const { berichtAlsExcel } = await import('../lib/export/excel');
-      const blob = await berichtAlsExcel(bericht, punkteFuerExport, alleFotosProPunkt);
-      const dateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'xlsx');
-      await dateiBereitstellen(
-        blob,
-        dateiname,
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      );
+      if (format === 'excel') {
+        const { berichtAlsExcel } = await import('../lib/export/excel');
+        const blob = await berichtAlsExcel(bericht, punkteFuerExport, alleFotosProPunkt);
+        const dateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'xlsx');
+        await dateiBereitstellen(
+          blob,
+          dateiname,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+      } else {
+        const { berichtAlsPdf } = await import('../lib/export/pdf');
+        const blob = await berichtAlsPdf(bericht, punkteFuerExport, alleFotosProPunkt);
+        const dateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'pdf');
+        await dateiBereitstellen(blob, dateiname, 'application/pdf');
+      }
       exportSichtbar = false;
     } catch (err) {
       exportFehler = err instanceof Error ? err.message : 'Export fehlgeschlagen.';
@@ -171,8 +178,11 @@
           <button class="btn btn-secondary" onclick={exportAbbrechen} disabled={exportLaeuft}>
             {texte.berichtForm.abbrechen}
           </button>
-          <button class="btn btn-primary" onclick={exportAusfuehren} disabled={exportLaeuft}>
-            {exportLaeuft ? texte.berichtUebersicht.exportLaeuft : texte.berichtUebersicht.exportStarten}
+          <button class="btn btn-primary" onclick={() => exportAusfuehren('excel')} disabled={exportLaeuft}>
+            {exportLaeuft ? texte.berichtUebersicht.exportLaeuft : texte.berichtUebersicht.exportExcel}
+          </button>
+          <button class="btn btn-primary" onclick={() => exportAusfuehren('pdf')} disabled={exportLaeuft}>
+            {exportLaeuft ? texte.berichtUebersicht.exportLaeuft : texte.berichtUebersicht.exportPdf}
           </button>
         </div>
       </div>
@@ -284,11 +294,12 @@
 
   .export-aktionen {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
   }
 
   .export-aktionen .btn {
-    flex: 1 1 0;
+    flex: 1 1 100px;
     min-width: 0;
   }
 

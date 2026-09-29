@@ -3,6 +3,7 @@ import type { Bericht, Foto, Punkt, PunktStatus } from '../model';
 import { formatDeutsch } from '../datum';
 import { lageText } from '../lage';
 import { pfeilInBildRendern } from './pfeilRendern';
+import { blobZuDataUrl } from './bild';
 
 const STATUS_TEXT: Record<PunktStatus, string> = {
   offen: 'offen',
@@ -20,14 +21,6 @@ const STATUS_FARBEN: Record<'offen' | 'in_bearbeitung' | 'erledigt' | 'geloescht
 function isoDatumDeutsch(isoDatumZeit: string | undefined): string {
   if (!isoDatumZeit) return '';
   return formatDeutsch(isoDatumZeit.slice(0, 10));
-}
-
-async function blobZuBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binaer = '';
-  for (let i = 0; i < bytes.length; i++) binaer += String.fromCharCode(bytes[i]);
-  return btoa(binaer);
 }
 
 export async function berichtAlsExcel(
@@ -134,7 +127,8 @@ export async function berichtAlsExcel(
 
     for (const foto of fotos) {
       const bildBlob = foto.pfeil ? await pfeilInBildRendern(foto.blob, foto.pfeil) : foto.blob;
-      const base64 = await blobZuBase64(bildBlob);
+      const dataUrl = await blobZuDataUrl(bildBlob);
+      const base64 = dataUrl.split(',')[1];
       const imageId = workbook.addImage({ base64, extension: 'jpeg' });
 
       const maxBreite = 130;
