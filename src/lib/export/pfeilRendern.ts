@@ -6,7 +6,11 @@ export interface PfeilKoordinaten {
 }
 
 export async function pfeilInBildRendern(blob: Blob, pfeil: PfeilKoordinaten): Promise<Blob> {
-  const bitmap = await createImageBitmap(blob);
+  // Blobs, die aus IndexedDB geladen wurden, lassen sich in Safari/WebKit gelegentlich nicht
+  // direkt per createImageBitmap lesen ("An error occured reading the Blob argument").
+  // Über arrayBuffer() neu materialisieren umgeht das zuverlässig.
+  const frischerBlob = new Blob([await blob.arrayBuffer()], { type: blob.type || 'image/jpeg' });
+  const bitmap = await createImageBitmap(frischerBlob);
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;

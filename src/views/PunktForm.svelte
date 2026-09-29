@@ -334,7 +334,7 @@
             </div>
           {/each}
           <label class="foto-aufnehmen" class:deaktiviert={fotos.length >= 3}>
-            <input type="file" accept="image/*" capture="environment" disabled={fotos.length >= 3} onchange={fotoAufnehmen} />
+            <input type="file" accept="image/*" disabled={fotos.length >= 3} onchange={fotoAufnehmen} />
             <span>+ {texte.punktForm.fotoAufnehmen}</span>
           </label>
         </div>
