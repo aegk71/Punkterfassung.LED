@@ -148,7 +148,7 @@ export async function berichtAlsPdf(
       ? doc.splitTextToSize(punkt.anmerkung, INHALT_BREITE - 8)
       : [];
 
-    const kopfOffset = 12;
+    const kopfOffset = 16;
     const anmerkungHoehe = anmerkungZeilen.length * 5;
     const fotoBereichHoehe = fotos.length > 0 ? FOTO_MAX_HOEHE + 4 : 0;
     const kartenHoehe = kopfOffset + anmerkungHoehe + fotoBereichHoehe + 4;
