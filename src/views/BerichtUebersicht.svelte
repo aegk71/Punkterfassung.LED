@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { db, punktWiederherstellen } from '../lib/db';
   import type { Bericht, Foto, Punkt } from '../lib/model';
   import { texte } from '../lib/texte/de';
@@ -96,6 +97,32 @@
   let exportLaeuft = $state(false);
   let exportFehler = $state('');
 
+  let pdfVorschauUrl = $state<string | null>(null);
+  let pdfVorschauDateiname = $state('');
+  let pdfVorschauBlob: Blob | null = null;
+  let pdfTeilenLaeuft = $state(false);
+
+  function pdfVorschauSchliessen() {
+    if (pdfVorschauUrl) URL.revokeObjectURL(pdfVorschauUrl);
+    pdfVorschauUrl = null;
+    pdfVorschauDateiname = '';
+    pdfVorschauBlob = null;
+  }
+
+  async function pdfVorschauTeilen() {
+    if (!pdfVorschauBlob) return;
+    pdfTeilenLaeuft = true;
+    try {
+      await dateiBereitstellen(pdfVorschauBlob, pdfVorschauDateiname, 'application/pdf');
+    } finally {
+      pdfTeilenLaeuft = false;
+    }
+  }
+
+  onDestroy(() => {
+    if (pdfVorschauUrl) URL.revokeObjectURL(pdfVorschauUrl);
+  });
+
   function exportStarten() {
     exportSichtbar = true;
     exportFehler = '';
@@ -124,13 +151,15 @@
           dateiname,
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
+        exportSichtbar = false;
       } else {
         const { berichtAlsPdf } = await import('../lib/export/pdf');
         const blob = await berichtAlsPdf(bericht, punkteFuerExport, alleFotosProPunkt);
-        const dateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'pdf');
-        await dateiBereitstellen(blob, dateiname, 'application/pdf');
+        pdfVorschauDateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'pdf');
+        pdfVorschauBlob = blob;
+        pdfVorschauUrl = URL.createObjectURL(blob);
+        exportSichtbar = false;
       }
-      exportSichtbar = false;
     } catch (err) {
       exportFehler = err instanceof Error ? err.message : 'Export fehlgeschlagen.';
     } finally {
@@ -242,6 +271,24 @@
   <button class="btn btn-primary fab" onclick={() => onNeuerPunkt(berichtId)}>
     {texte.berichtUebersicht.neuerPunkt}
   </button>
+
+  {#if pdfVorschauUrl}
+    <div class="pdf-vorschau-overlay">
+      <div class="pdf-vorschau-kopf">
+        <span class="pdf-vorschau-titel">{texte.berichtUebersicht.pdfVorschauTitel}</span>
+        <button class="btn btn-secondary btn-klein" onclick={pdfVorschauSchliessen}>
+          {texte.berichtUebersicht.pdfSchliessen}
+        </button>
+      </div>
+      <iframe class="pdf-vorschau-frame" src={pdfVorschauUrl} title={texte.berichtUebersicht.pdfVorschauTitel}
+      ></iframe>
+      <div class="pdf-vorschau-fuss">
+        <button class="btn btn-primary" onclick={pdfVorschauTeilen} disabled={pdfTeilenLaeuft}>
+          {texte.berichtUebersicht.pdfTeilen}
+        </button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -425,5 +472,43 @@
     bottom: calc(16px + env(safe-area-inset-bottom));
     max-width: 608px;
     margin: 0 auto;
+  }
+
+  .pdf-vorschau-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--card);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pdf-vorschau-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .pdf-vorschau-titel {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .pdf-vorschau-frame {
+    flex: 1 1 auto;
+    width: 100%;
+    border: 0;
+  }
+
+  .pdf-vorschau-fuss {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+  }
+
+  .pdf-vorschau-fuss .btn {
+    width: 100%;
   }
 </style>

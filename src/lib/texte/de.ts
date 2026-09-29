@@ -91,5 +91,8 @@ export const texte = {
     exportExcel: 'Als Excel',
     exportPdf: 'Als PDF',
     exportLaeuft: 'Export läuft …',
+    pdfVorschauTitel: 'PDF-Vorschau',
+    pdfSchliessen: 'Schließen',
+    pdfTeilen: 'Teilen / Speichern',
   },
 } as const;
