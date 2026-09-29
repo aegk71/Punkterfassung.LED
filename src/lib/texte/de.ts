@@ -109,5 +109,12 @@ export const texte = {
     pdfSchliessen: 'Schließen',
     pdfTeilen: 'Teilen / Speichern',
     pdfSeitenLaden: 'Weitere Seiten werden geladen …',
+    loeschen: 'Bericht löschen',
+    loeschenBestaetigenTitel: 'Bericht wirklich löschen?',
+    loeschenBestaetigenText:
+      'Diese Aktion kann nicht rückgängig gemacht werden. Alle Punkte und Fotos dieses Berichts werden endgültig entfernt.',
+    loeschenKeinBackup: 'Dieser Bericht wurde noch nicht als ZIP-Backup gesichert.',
+    loeschenLetztesBackup: (datum: string) => `Letztes ZIP-Backup: ${datum}`,
+    loeschenBestaetigen: 'Endgültig löschen',
   },
 } as const;

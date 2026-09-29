@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { db, punktWiederherstellen } from '../lib/db';
+  import { db, punktWiederherstellen, berichtHartLoeschen } from '../lib/db';
   import type { Bericht, Foto, Punkt } from '../lib/model';
   import { texte } from '../lib/texte/de';
   import { naturalCompare } from '../lib/naturalSort';
-  import { heuteIso } from '../lib/datum';
+  import { heuteIso, formatDeutsch } from '../lib/datum';
   import { exportDateiname } from '../lib/export/dateiname';
   import { dateiBereitstellen } from '../lib/export/teilen';
   import ZiffernblattSymbol from '../components/ZiffernblattSymbol.svelte';
@@ -75,14 +75,29 @@
 
   async function statusUmschalten() {
     if (!bericht) return;
-    bericht.status = bericht.status === 'offen' ? 'abgeschlossen' : 'offen';
-    bericht.geaendertAm = new Date().toISOString();
-    await db.berichte.put(bericht);
+    const neuerStatus = bericht.status === 'offen' ? 'abgeschlossen' : 'offen';
+    const geaendertAm = new Date().toISOString();
+    await db.berichte.put({ ...$state.snapshot(bericht), status: neuerStatus, geaendertAm });
+    bericht.status = neuerStatus;
+    bericht.geaendertAm = geaendertAm;
   }
 
   async function wiederherstellen(punktId: string) {
     await punktWiederherstellen(punktId);
     await laden();
+  }
+
+  let loeschenBestaetigenSichtbar = $state(false);
+  let loeschenLaeuft = $state(false);
+
+  async function berichtLoeschenBestaetigt() {
+    loeschenLaeuft = true;
+    try {
+      await berichtHartLoeschen(berichtId);
+      onZurueck();
+    } finally {
+      loeschenLaeuft = false;
+    }
   }
 
   function statusText(punkt: Punkt): string {
@@ -202,7 +217,34 @@
       <button class="btn btn-secondary btn-klein" onclick={exportStarten}>
         {texte.berichtUebersicht.export}
       </button>
+      <button class="btn btn-secondary btn-klein loeschen-btn" onclick={() => (loeschenBestaetigenSichtbar = true)}>
+        {texte.berichtUebersicht.loeschen}
+      </button>
     </div>
+
+    {#if loeschenBestaetigenSichtbar}
+      <div class="card loeschen-block">
+        <p class="loeschen-titel">{texte.berichtUebersicht.loeschenBestaetigenTitel}</p>
+        <p>{texte.berichtUebersicht.loeschenBestaetigenText}</p>
+        <p class="backup-hinweis">
+          {bericht.letzteSicherung
+            ? texte.berichtUebersicht.loeschenLetztesBackup(formatDeutsch(bericht.letzteSicherung.slice(0, 10)))
+            : texte.berichtUebersicht.loeschenKeinBackup}
+        </p>
+        <div class="loeschen-aktionen">
+          <button
+            class="btn btn-secondary"
+            onclick={() => (loeschenBestaetigenSichtbar = false)}
+            disabled={loeschenLaeuft}
+          >
+            {texte.berichtForm.abbrechen}
+          </button>
+          <button class="btn loeschen-bestaetigen-btn" onclick={berichtLoeschenBestaetigt} disabled={loeschenLaeuft}>
+            {texte.berichtUebersicht.loeschenBestaetigen}
+          </button>
+        </div>
+      </div>
+    {/if}
 
     {#if exportSichtbar}
       <div class="card export-block">
@@ -391,6 +433,39 @@
     color: var(--status-offen);
     font-weight: 600;
     margin: 0;
+  }
+
+  .loeschen-block {
+    display: grid;
+    gap: 10px;
+    border-color: var(--status-offen);
+    margin-bottom: 20px;
+  }
+
+  .loeschen-titel {
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .loeschen-block .backup-hinweis {
+    color: var(--status-offen);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .loeschen-aktionen {
+    display: flex;
+    gap: 10px;
+  }
+
+  .loeschen-aktionen .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .loeschen-bestaetigen-btn {
+    background: var(--status-offen);
+    color: #fff;
   }
 
   .btn-klein {

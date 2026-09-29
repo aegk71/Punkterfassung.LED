@@ -37,6 +37,17 @@ export async function punktWiederherstellen(punktId: string): Promise<void> {
   await db.punkte.put(punkt);
 }
 
+export async function berichtHartLoeschen(berichtId: string): Promise<void> {
+  await db.transaction('rw', db.berichte, db.punkte, db.fotos, async () => {
+    const punktIds = await db.punkte.where('berichtId').equals(berichtId).primaryKeys();
+    if (punktIds.length > 0) {
+      await db.fotos.where('punktId').anyOf(punktIds).delete();
+    }
+    await db.punkte.where('berichtId').equals(berichtId).delete();
+    await db.berichte.delete(berichtId);
+  });
+}
+
 export async function ladeEinstellungen(): Promise<Einstellungen> {
   const bestehend = await db.einstellungen.get('global');
   if (bestehend) return bestehend;
