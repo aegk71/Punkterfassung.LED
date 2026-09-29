@@ -398,6 +398,7 @@
   .punkt-bg {
     color: var(--muted);
     font-size: 14px;
+    margin-left: 8px;
   }
 
   .punkt-fotos {
