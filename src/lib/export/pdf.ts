@@ -5,7 +5,7 @@ import { berichtTexte, lageTextExport } from './berichtstexte';
 import { naturalCompare } from '../naturalSort';
 import { tuerSegment, segmentMitte } from '../tuer';
 import { pfeilInBildRendern } from './pfeilRendern';
-import { blobZuDataUrl, bildLaden } from './bild';
+import { blobZuDataUrl, bildLaden, blobSicherLesen } from './bild';
 
 const SEITE_BREITE = 210;
 const SEITE_HOEHE = 297;
@@ -200,14 +200,19 @@ export async function berichtAlsPdf(
 
       for (let i = 0; i < fotos.length; i++) {
         const foto = fotos[i];
-        const bildBlob = foto.pfeil ? await pfeilInBildRendern(foto.blob, foto.pfeil) : foto.blob;
-        const dataUrl = await blobZuDataUrl(bildBlob);
-        const skalierung = Math.min(slotBreite / foto.breite, FOTO_MAX_HOEHE / foto.hoehe, 1);
-        const breite = foto.breite * skalierung;
-        const hoehe = foto.hoehe * skalierung;
-        const slotX = innenX + i * (slotBreite + luecke);
-        const bildX = slotX + (slotBreite - breite) / 2;
-        doc.addImage(dataUrl, 'JPEG', bildX, innenY, breite, hoehe);
+        try {
+          const bildBlob = foto.pfeil ? await pfeilInBildRendern(foto.blob, foto.pfeil) : await blobSicherLesen(foto.blob);
+          const dataUrl = await blobZuDataUrl(bildBlob);
+          const skalierung = Math.min(slotBreite / foto.breite, FOTO_MAX_HOEHE / foto.hoehe, 1);
+          const breite = foto.breite * skalierung;
+          const hoehe = foto.hoehe * skalierung;
+          const slotX = innenX + i * (slotBreite + luecke);
+          const bildX = slotX + (slotBreite - breite) / 2;
+          doc.addImage(dataUrl, 'JPEG', bildX, innenY, breite, hoehe);
+        } catch {
+          // Foto konnte nicht gelesen werden (z. B. von iOS verworfene Blob-Ablagedatei) –
+          // dieses eine Foto überspringen, statt den ganzen Export abzubrechen.
+        }
       }
     }
 

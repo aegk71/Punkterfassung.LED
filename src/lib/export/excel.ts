@@ -3,7 +3,7 @@ import type { Bericht, Foto, Punkt } from '../model';
 import { formatDeutsch } from '../datum';
 import { berichtTexte, lageTextExport } from './berichtstexte';
 import { pfeilInBildRendern } from './pfeilRendern';
-import { blobZuDataUrl } from './bild';
+import { blobZuDataUrl, blobSicherLesen } from './bild';
 
 const STATUS_FARBEN: Record<'offen' | 'in_bearbeitung' | 'erledigt' | 'geloescht', { bg: string; font: string }> = {
   offen: { bg: 'FFFBEAE8', font: 'FFC0392B' },
@@ -121,22 +121,27 @@ export async function berichtAlsExcel(
     if (fotos.length > 0) zeile.height = 75;
 
     for (const foto of fotos) {
-      const bildBlob = foto.pfeil ? await pfeilInBildRendern(foto.blob, foto.pfeil) : foto.blob;
-      const dataUrl = await blobZuDataUrl(bildBlob);
-      const base64 = dataUrl.split(',')[1];
-      const imageId = workbook.addImage({ base64, extension: 'jpeg' });
+      try {
+        const bildBlob = foto.pfeil ? await pfeilInBildRendern(foto.blob, foto.pfeil) : await blobSicherLesen(foto.blob);
+        const dataUrl = await blobZuDataUrl(bildBlob);
+        const base64 = dataUrl.split(',')[1];
+        const imageId = workbook.addImage({ base64, extension: 'jpeg' });
 
-      const maxBreite = 130;
-      const maxHoehe = 95;
-      const skalierung = Math.min(maxBreite / foto.breite, maxHoehe / foto.hoehe, 1);
-      const breite = foto.breite * skalierung;
-      const hoehe = foto.hoehe * skalierung;
+        const maxBreite = 130;
+        const maxHoehe = 95;
+        const skalierung = Math.min(maxBreite / foto.breite, maxHoehe / foto.hoehe, 1);
+        const breite = foto.breite * skalierung;
+        const hoehe = foto.hoehe * skalierung;
 
-      const spalteIndex = 6 + (foto.reihenfolge - 1);
-      blatt.addImage(imageId, {
-        tl: { col: spalteIndex, row: zeile.number - 1 },
-        ext: { width: breite, height: hoehe },
-      });
+        const spalteIndex = 6 + (foto.reihenfolge - 1);
+        blatt.addImage(imageId, {
+          tl: { col: spalteIndex, row: zeile.number - 1 },
+          ext: { width: breite, height: hoehe },
+        });
+      } catch {
+        // Foto konnte nicht gelesen werden (z. B. von iOS verworfene Blob-Ablagedatei) –
+        // dieses eine Foto überspringen, statt den ganzen Export abzubrechen.
+      }
     }
   }
 

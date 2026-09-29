@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import type { Bericht, Foto, Punkt } from '../model';
 import { db } from '../db';
+import { blobSicherLesen } from './bild';
 
 const SCHEMA_VERSION = 1;
 
@@ -18,7 +19,12 @@ export async function berichtAlsZip(bericht: Bericht, punkte: Punkt[], fotos: Fo
   for (const foto of fotos) {
     const { blob, ...meta } = foto;
     fotosMeta.push(meta);
-    zip.file(`fotos/${foto.id}.jpg`, blob);
+    try {
+      zip.file(`fotos/${foto.id}.jpg`, await blobSicherLesen(blob));
+    } catch {
+      // Foto konnte nicht gelesen werden (z. B. von iOS verworfene Blob-Ablagedatei) –
+      // Metadaten bleiben im Backup, nur die Bilddatei fehlt für dieses eine Foto.
+    }
   }
 
   const inhalt: BerichtJson = { schemaVersion: SCHEMA_VERSION, bericht, punkte, fotos: fotosMeta };
