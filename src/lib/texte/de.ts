@@ -10,6 +10,13 @@ export const texte = {
     punkteOffen: 'offen',
     punkteInBearbeitung: 'in Bearbeitung',
     punkteErledigt: 'erledigt',
+    zipImport: 'ZIP-Import',
+    zipImportFehler: 'ZIP-Import fehlgeschlagen.',
+    zipKollisionFrage: 'Ein Bericht mit dieser ID existiert bereits. Wie soll verfahren werden?',
+    zipKollisionErsetzen: 'Ersetzen',
+    zipKollisionKopie: 'Als Kopie importieren',
+    abbrechen: 'Abbrechen',
+    zipBackupHinweis: (tage: number) => `Seit ${tage} Tagen kein Backup`,
   },
   berichtForm: {
     titelNeu: 'Neuer Bericht',
@@ -37,6 +44,11 @@ export const texte = {
     aktiv: 'Aktiv',
     inaktiv: 'Inaktiv',
     zurueck: 'Zurück',
+    speicherTitel: 'Speicher & Datensicherheit',
+    speicherPersistiertJa: 'Dauerhaft gesichert (persistent) – iOS räumt diese Daten nicht automatisch auf.',
+    speicherPersistiertNein: 'Nicht als dauerhaft markiert – iOS kann diese Daten bei Speicherknappheit löschen.',
+    speicherHinweis:
+      'Alle Berichte liegen ausschließlich auf diesem Gerät. Wird das App-Symbol vom Home-Bildschirm entfernt oder werden die Website-Daten gelöscht, gehen sie unwiderruflich verloren. Wichtige Berichte regelmäßig als ZIP-Backup sichern.',
   },
   allgemein: {
     zurueck: 'Zurück',
@@ -90,9 +102,12 @@ export const texte = {
     exportOffenBearbeitung: 'Nur offen + in Bearbeitung',
     exportExcel: 'Als Excel',
     exportPdf: 'Als PDF',
+    exportZip: 'Als ZIP-Backup',
+    exportZipHinweis: 'Das ZIP-Backup enthält immer alle Punkte, auch gelöschte.',
     exportLaeuft: 'Export läuft …',
     pdfVorschauTitel: 'PDF-Vorschau',
     pdfSchliessen: 'Schließen',
     pdfTeilen: 'Teilen / Speichern',
+    pdfSeitenLaden: 'Weitere Seiten werden geladen …',
   },
 } as const;

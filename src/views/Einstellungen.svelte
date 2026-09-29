@@ -8,8 +8,21 @@
   let einstellungen = $state<Einstellungen | null>(null);
   let neueBaugruppe = $state('');
 
+  let speicherPersistiert = $state<boolean | null>(null);
+  let speicherVerwendetMb = $state<number | null>(null);
+  let speicherVerfuegbarMb = $state<number | null>(null);
+
   async function laden() {
     einstellungen = await ladeEinstellungen();
+
+    if (navigator.storage?.persisted) {
+      speicherPersistiert = await navigator.storage.persisted();
+    }
+    if (navigator.storage?.estimate) {
+      const schaetzung = await navigator.storage.estimate();
+      speicherVerwendetMb = (schaetzung.usage ?? 0) / (1024 * 1024);
+      speicherVerfuegbarMb = (schaetzung.quota ?? 0) / (1024 * 1024);
+    }
   }
 
   laden();
@@ -114,6 +127,21 @@
         />
         <button class="btn btn-primary" onclick={hinzufuegen}>{texte.einstellungen.hinzufuegen}</button>
       </div>
+    </section>
+
+    <section class="block">
+      <h2 class="section-label">{texte.einstellungen.speicherTitel}</h2>
+      {#if speicherPersistiert !== null}
+        <p class="speicher-status" class:ok={speicherPersistiert}>
+          {speicherPersistiert ? texte.einstellungen.speicherPersistiertJa : texte.einstellungen.speicherPersistiertNein}
+        </p>
+      {/if}
+      {#if speicherVerwendetMb !== null && speicherVerfuegbarMb !== null}
+        <p class="hinweis">
+          {speicherVerwendetMb.toFixed(1)} MB von {speicherVerfuegbarMb.toFixed(0)} MB verwendet
+        </p>
+      {/if}
+      <p class="hinweis">{texte.einstellungen.speicherHinweis}</p>
     </section>
   {/if}
 </div>
@@ -228,5 +256,15 @@
   .neu-zeile input {
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .speicher-status {
+    font-weight: 600;
+    color: var(--status-offen);
+    margin: 0 0 6px;
+  }
+
+  .speicher-status.ok {
+    color: var(--status-erledigt);
   }
 </style>

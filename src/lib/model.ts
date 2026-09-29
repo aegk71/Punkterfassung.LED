@@ -28,6 +28,7 @@ export interface Bericht {
   ort?: string;
   status: BerichtStatus;
   naechstePunktNr: number;
+  letzteSicherung?: string;
   erstelltAm: string;
   geaendertAm: string;
 }

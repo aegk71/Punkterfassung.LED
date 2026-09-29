@@ -52,5 +52,10 @@ export async function ladeEinstellungen(): Promise<Einstellungen> {
     })),
   };
   await db.einstellungen.put(standard);
+
+  if (navigator.storage?.persist) {
+    navigator.storage.persist();
+  }
+
   return standard;
 }

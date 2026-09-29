@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
   import { db, punktWiederherstellen } from '../lib/db';
   import type { Bericht, Foto, Punkt } from '../lib/model';
   import { texte } from '../lib/texte/de';
@@ -97,14 +96,15 @@
   let exportLaeuft = $state(false);
   let exportFehler = $state('');
 
-  let pdfVorschauUrl = $state<string | null>(null);
+  let pdfVorschauSeiten = $state<string[]>([]);
+  let pdfVorschauSeitenAnzahl = $state(0);
   let pdfVorschauDateiname = $state('');
   let pdfVorschauBlob: Blob | null = null;
   let pdfTeilenLaeuft = $state(false);
 
   function pdfVorschauSchliessen() {
-    if (pdfVorschauUrl) URL.revokeObjectURL(pdfVorschauUrl);
-    pdfVorschauUrl = null;
+    pdfVorschauSeiten = [];
+    pdfVorschauSeitenAnzahl = 0;
     pdfVorschauDateiname = '';
     pdfVorschauBlob = null;
   }
@@ -119,10 +119,6 @@
     }
   }
 
-  onDestroy(() => {
-    if (pdfVorschauUrl) URL.revokeObjectURL(pdfVorschauUrl);
-  });
-
   function exportStarten() {
     exportSichtbar = true;
     exportFehler = '';
@@ -132,7 +128,7 @@
     exportSichtbar = false;
   }
 
-  async function exportAusfuehren(format: 'excel' | 'pdf') {
+  async function exportAusfuehren(format: 'excel' | 'pdf' | 'zip') {
     if (!bericht) return;
     exportLaeuft = true;
     exportFehler = '';
@@ -152,12 +148,31 @@
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
         exportSichtbar = false;
-      } else {
+      } else if (format === 'pdf') {
         const { berichtAlsPdf } = await import('../lib/export/pdf');
         const blob = await berichtAlsPdf(bericht, punkteFuerExport, alleFotosProPunkt);
         pdfVorschauDateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'pdf');
         pdfVorschauBlob = blob;
-        pdfVorschauUrl = URL.createObjectURL(blob);
+        pdfVorschauSeiten = [];
+        pdfVorschauSeitenAnzahl = 0;
+
+        const { pdfSeitenRendern } = await import('../lib/export/pdfVorschau');
+        await pdfSeitenRendern(blob, (bildDataUrl, seitenNr, seitenAnzahl) => {
+          pdfVorschauSeiten = [...pdfVorschauSeiten, bildDataUrl];
+          pdfVorschauSeitenAnzahl = seitenAnzahl;
+          if (seitenNr === 1) exportSichtbar = false;
+        });
+      } else {
+        const alleFotos = Array.from(alleFotosProPunkt.values()).flat();
+        const { berichtAlsZip } = await import('../lib/export/zip');
+        const blob = await berichtAlsZip($state.snapshot(bericht), $state.snapshot(punkte), $state.snapshot(alleFotos));
+        const dateiname = exportDateiname(bericht.projektNr, bericht.vorgang, heuteIso(), 'zip');
+        await dateiBereitstellen(blob, dateiname, 'application/zip');
+
+        const jetzt = new Date().toISOString();
+        const berichtZumSpeichern = { ...$state.snapshot(bericht), letzteSicherung: jetzt };
+        await db.berichte.put(berichtZumSpeichern);
+        bericht.letzteSicherung = jetzt;
         exportSichtbar = false;
       }
     } catch (err) {
@@ -214,6 +229,12 @@
             {exportLaeuft ? texte.berichtUebersicht.exportLaeuft : texte.berichtUebersicht.exportPdf}
           </button>
         </div>
+        <div class="export-aktionen">
+          <button class="btn btn-secondary zip-btn" onclick={() => exportAusfuehren('zip')} disabled={exportLaeuft}>
+            {exportLaeuft ? texte.berichtUebersicht.exportLaeuft : texte.berichtUebersicht.exportZip}
+          </button>
+        </div>
+        <p class="export-zip-hinweis">{texte.berichtUebersicht.exportZipHinweis}</p>
       </div>
     {/if}
 
@@ -272,7 +293,7 @@
     {texte.berichtUebersicht.neuerPunkt}
   </button>
 
-  {#if pdfVorschauUrl}
+  {#if pdfVorschauSeiten.length > 0}
     <div class="pdf-vorschau-overlay">
       <div class="pdf-vorschau-kopf">
         <span class="pdf-vorschau-titel">{texte.berichtUebersicht.pdfVorschauTitel}</span>
@@ -280,8 +301,14 @@
           {texte.berichtUebersicht.pdfSchliessen}
         </button>
       </div>
-      <iframe class="pdf-vorschau-frame" src={pdfVorschauUrl} title={texte.berichtUebersicht.pdfVorschauTitel}
-      ></iframe>
+      <div class="pdf-vorschau-frame">
+        {#each pdfVorschauSeiten as seite, i (i)}
+          <img class="pdf-seite" src={seite} alt={`Seite ${i + 1}`} />
+        {/each}
+        {#if pdfVorschauSeiten.length < pdfVorschauSeitenAnzahl}
+          <p class="pdf-laedt-hinweis">{texte.berichtUebersicht.pdfSeitenLaden}</p>
+        {/if}
+      </div>
       <div class="pdf-vorschau-fuss">
         <button class="btn btn-primary" onclick={pdfVorschauTeilen} disabled={pdfTeilenLaeuft}>
           {texte.berichtUebersicht.pdfTeilen}
@@ -348,6 +375,16 @@
   .export-aktionen .btn {
     flex: 1 1 100px;
     min-width: 0;
+  }
+
+  .zip-btn {
+    flex: 1 1 auto;
+  }
+
+  .export-zip-hinweis {
+    color: var(--muted);
+    font-size: 12px;
+    margin: -4px 0 0;
   }
 
   .fehler {
@@ -499,8 +536,27 @@
 
   .pdf-vorschau-frame {
     flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pdf-seite {
     width: 100%;
-    border: 0;
+    max-width: 480px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+
+  .pdf-laedt-hinweis {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 4px 0 12px;
   }
 
   .pdf-vorschau-fuss {
