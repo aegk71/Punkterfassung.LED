@@ -1,6 +1,7 @@
 export type Lage = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 'M';
 export type PunktStatus = 'offen' | 'in_bearbeitung' | 'erledigt';
 export type BerichtStatus = 'offen' | 'abgeschlossen';
+export type BerichtSprache = 'de' | 'en';
 
 export interface Baugruppe {
   id: string;
@@ -27,6 +28,7 @@ export interface Bericht {
   neubauName?: string;
   ort?: string;
   status: BerichtStatus;
+  sprache: BerichtSprache;
   naechstePunktNr: number;
   letzteSicherung?: string;
   erstelltAm: string;

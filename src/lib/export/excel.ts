@@ -1,15 +1,9 @@
 import ExcelJS from 'exceljs';
-import type { Bericht, Foto, Punkt, PunktStatus } from '../model';
+import type { Bericht, Foto, Punkt } from '../model';
 import { formatDeutsch } from '../datum';
-import { lageText } from '../lage';
+import { berichtTexte, lageTextExport } from './berichtstexte';
 import { pfeilInBildRendern } from './pfeilRendern';
 import { blobZuDataUrl } from './bild';
-
-const STATUS_TEXT: Record<PunktStatus, string> = {
-  offen: 'offen',
-  in_bearbeitung: 'in Bearbeitung',
-  erledigt: 'erledigt',
-};
 
 const STATUS_FARBEN: Record<'offen' | 'in_bearbeitung' | 'erledigt' | 'geloescht', { bg: string; font: string }> = {
   offen: { bg: 'FFFBEAE8', font: 'FFC0392B' },
@@ -28,19 +22,20 @@ export async function berichtAlsExcel(
   punkte: Punkt[],
   fotosProPunkt: Map<string, Foto[]>,
 ): Promise<Blob> {
+  const t = berichtTexte(bericht.sprache);
   const workbook = new ExcelJS.Workbook();
   const blatt = workbook.addWorksheet('Punkte');
 
   const kopfFelder: [string, string][] = [
-    ['Projekt-Nr.', bericht.projektNr],
-    ['Projektname', bericht.projektName],
-    ['Vorgang', bericht.vorgang],
-    ['Beschreibung', bericht.beschreibung],
-    ['Neubau-Nr.', bericht.neubauNr ?? ''],
-    ['Neubau-Name', bericht.neubauName ?? ''],
-    ['Ort', bericht.ort ?? ''],
-    ['Ersteller', bericht.ersteller],
-    ['Datum', formatDeutsch(bericht.datum)],
+    [t.projektNr, bericht.projektNr],
+    [t.projektName, bericht.projektName],
+    [t.vorgang, bericht.vorgang],
+    [t.beschreibung, bericht.beschreibung],
+    [t.neubauNr, bericht.neubauNr ?? ''],
+    [t.neubauName, bericht.neubauName ?? ''],
+    [t.ort, bericht.ort ?? ''],
+    [t.ersteller, bericht.ersteller],
+    [t.datum, formatDeutsch(bericht.datum)],
   ];
 
   kopfFelder.forEach(([label, wert]) => {
@@ -50,18 +45,18 @@ export async function berichtAlsExcel(
   blatt.addRow([]);
 
   const spalten = [
-    'Anlage',
-    'Pkt.-Nr.',
-    'Lage',
-    'BG',
+    t.anlage,
+    t.pktNr,
+    t.lage,
+    t.baugruppe,
     'Status',
-    'Anmerkung',
-    'Foto 1',
-    'Foto 2',
-    'Foto 3',
-    'erfasst am',
-    'erledigt am',
-    'Gelöscht',
+    t.anmerkung,
+    t.foto(1),
+    t.foto(2),
+    t.foto(3),
+    t.erfasstAm,
+    t.erledigtAm,
+    t.geloescht,
   ];
   const kopfZeileIndex = blatt.rowCount + 1;
   const kopfZeile = blatt.addRow(spalten);
@@ -92,15 +87,15 @@ export async function berichtAlsExcel(
 
   for (const punkt of punkteSortiert) {
     const statusSchluessel = punkt.geloescht ? 'geloescht' : punkt.status;
-    const statusText = punkt.geloescht ? 'gelöscht' : STATUS_TEXT[punkt.status];
+    const statusText = punkt.geloescht ? t.status.geloescht : t.status[punkt.status];
     const gelöschtText = punkt.geloescht
-      ? `${isoDatumDeutsch(punkt.geloescht.am)} durch ${punkt.geloescht.durch}${punkt.geloescht.grund ? ` – ${punkt.geloescht.grund}` : ''}`
+      ? `${t.geloeschtAmDurch(isoDatumDeutsch(punkt.geloescht.am), punkt.geloescht.durch)}${punkt.geloescht.grund ? ` – ${punkt.geloescht.grund}` : ''}`
       : '';
 
     const zeile = blatt.addRow([
       punkt.anlageNr,
       punkt.nr,
-      lageText(punkt.lage),
+      lageTextExport(punkt.lage, bericht.sprache),
       punkt.baugruppeName,
       statusText,
       punkt.anmerkung ?? '',
@@ -119,7 +114,7 @@ export async function berichtAlsExcel(
     statusZelle.dataValidation = {
       type: 'list',
       allowBlank: false,
-      formulae: ['"offen,in Bearbeitung,erledigt,gelöscht"'],
+      formulae: [`"${t.statusListe}"`],
     };
 
     const fotos = (fotosProPunkt.get(punkt.id) ?? []).slice().sort((a, b) => a.reihenfolge - b.reihenfolge);

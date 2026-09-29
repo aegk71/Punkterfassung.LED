@@ -1,6 +1,6 @@
 <script lang="ts">
   import { db, ladeEinstellungen } from '../lib/db';
-  import type { Bericht } from '../lib/model';
+  import type { Bericht, BerichtSprache } from '../lib/model';
   import { texte } from '../lib/texte/de';
   import { heuteIso } from '../lib/datum';
 
@@ -25,6 +25,7 @@
   let neubauNr = $state('');
   let neubauName = $state('');
   let ort = $state('');
+  let sprache = $state<BerichtSprache>('de');
 
   let versuchtGespeichert = $state(false);
 
@@ -54,6 +55,7 @@
         neubauNr = bericht.neubauNr ?? '';
         neubauName = bericht.neubauName ?? '';
         ort = bericht.ort ?? '';
+        sprache = bericht.sprache ?? 'de';
       }
     } else {
       const einstellungen = await ladeEinstellungen();
@@ -81,6 +83,7 @@
       neubauName: neubauName.trim() || undefined,
       ort: ort.trim() || undefined,
       status: statusBestehend,
+      sprache,
       naechstePunktNr: naechstePunktNrBestehend,
       erstelltAm: erstelltAmBestehend || jetzt,
       geaendertAm: jetzt,
@@ -135,6 +138,13 @@
         {texte.berichtForm.ort}
         <input type="text" bind:value={ort} />
       </label>
+      <label>
+        {texte.berichtForm.sprache}
+        <select bind:value={sprache}>
+          <option value="de">{texte.berichtForm.spracheDeutsch}</option>
+          <option value="en">{texte.berichtForm.spracheEnglisch}</option>
+        </select>
+      </label>
 
       {#if versuchtGespeichert && !vollstaendig}
         <p class="fehler">{texte.berichtForm.pflichtfeldHinweis}</p>
@@ -177,7 +187,8 @@
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     font: inherit;
     font-weight: 400;
     color: var(--ink);

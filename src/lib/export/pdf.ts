@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import type { Bericht, Foto, Lage, Punkt, PunktStatus } from '../model';
 import { formatDeutsch } from '../datum';
-import { lageText } from '../lage';
+import { berichtTexte, lageTextExport } from './berichtstexte';
 import { naturalCompare } from '../naturalSort';
 import { tuerSegment, segmentMitte } from '../tuer';
 import { pfeilInBildRendern } from './pfeilRendern';
@@ -12,12 +12,6 @@ const SEITE_HOEHE = 297;
 const RAND = 15;
 const INHALT_BREITE = SEITE_BREITE - 2 * RAND;
 const FOTO_MAX_HOEHE = 38;
-
-const STATUS_TEXT: Record<PunktStatus, string> = {
-  offen: 'offen',
-  in_bearbeitung: 'in Bearbeitung',
-  erledigt: 'erledigt',
-};
 
 const STATUS_FARBEN: Record<PunktStatus, { bg: [number, number, number]; text: [number, number, number] }> = {
   offen: { bg: [251, 234, 232], text: [192, 57, 43] },
@@ -53,6 +47,7 @@ export async function berichtAlsPdf(
   punkte: Punkt[],
   fotosProPunkt: Map<string, Foto[]>,
 ): Promise<Blob> {
+  const t = berichtTexte(bericht.sprache);
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const logo = await bildLaden(`${import.meta.env.BASE_URL}assets/lethe-logo.jpg`);
   const logoZielHoehe = 10;
@@ -90,19 +85,19 @@ export async function berichtAlsPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(26, 29, 33);
-  doc.text('Punkterfassung – Bericht', RAND, y);
+  doc.text(t.titel, RAND, y);
   y += 10;
 
   const deckblattFelder: [string, string][] = [
-    ['Projekt-Nr.', bericht.projektNr],
-    ['Projektname', bericht.projektName],
-    ['Vorgang', bericht.vorgang],
-    ['Beschreibung', bericht.beschreibung],
-    ['Neubau-Nr.', bericht.neubauNr ?? '–'],
-    ['Neubau-Name', bericht.neubauName ?? '–'],
-    ['Ort', bericht.ort ?? '–'],
-    ['Ersteller', bericht.ersteller],
-    ['Datum', formatDeutsch(bericht.datum)],
+    [t.projektNr, bericht.projektNr],
+    [t.projektName, bericht.projektName],
+    [t.vorgang, bericht.vorgang],
+    [t.beschreibung, bericht.beschreibung],
+    [t.neubauNr, bericht.neubauNr ?? '–'],
+    [t.neubauName, bericht.neubauName ?? '–'],
+    [t.ort, bericht.ort ?? '–'],
+    [t.ersteller, bericht.ersteller],
+    [t.datum, formatDeutsch(bericht.datum)],
   ];
 
   doc.setFontSize(11);
@@ -127,17 +122,17 @@ export async function berichtAlsPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(26, 29, 33);
-  doc.text('Zusammenfassung', RAND, y);
+  doc.text(t.zusammenfassung, RAND, y);
   y += 7;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   const zusammenfassungTeile = [
-    `${zaehler.offen} offen`,
-    `${zaehler.in_bearbeitung} in Bearbeitung`,
-    `${zaehler.erledigt} erledigt`,
+    `${zaehler.offen} ${t.status.offen}`,
+    `${zaehler.in_bearbeitung} ${t.status.in_bearbeitung}`,
+    `${zaehler.erledigt} ${t.status.erledigt}`,
   ];
-  if (geloeschtePunkte.length > 0) zusammenfassungTeile.push(`${geloeschtePunkte.length} gelöscht`);
+  if (geloeschtePunkte.length > 0) zusammenfassungTeile.push(`${geloeschtePunkte.length} ${t.status.geloescht}`);
   platzPruefen(7);
   doc.text(zusammenfassungTeile.join(' · '), RAND, y);
   y += 12;
@@ -173,11 +168,11 @@ export async function berichtAlsPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(92, 102, 114);
-    doc.text(lageText(punkt.lage), innenX + 25, innenY);
+    doc.text(lageTextExport(punkt.lage, bericht.sprache), innenX + 25, innenY);
     doc.text(punkt.baugruppeName, innenX + 55, innenY);
 
     const farben = STATUS_FARBEN[punkt.status];
-    const statusTextWert = STATUS_TEXT[punkt.status];
+    const statusTextWert = t.status[punkt.status];
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     const statusBreite = doc.getTextWidth(statusTextWert) + 6;
@@ -232,7 +227,7 @@ export async function berichtAlsPdf(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(20, 56, 104);
-    doc.text(`Anlage ${anlageNr}`, RAND, y);
+    doc.text(`${t.anlage} ${anlageNr}`, RAND, y);
     y += 8;
 
     const sortiert = [...anlagenPunkte].sort((a, b) => a.nr - b.nr);
@@ -247,7 +242,7 @@ export async function berichtAlsPdf(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(20, 56, 104);
-    doc.text('Gelöschte Punkte', RAND, y);
+    doc.text(t.geloeschtePunkte, RAND, y);
     y += 8;
 
     const geloeschtSortiert = [...geloeschtePunkte].sort(
@@ -256,7 +251,7 @@ export async function berichtAlsPdf(
     for (const punkt of geloeschtSortiert) {
       const info = punkt.geloescht;
       if (!info) continue;
-      const zeileText = `#${punkt.nr} · Anlage ${punkt.anlageNr} · gelöscht am ${isoDatumDeutsch(info.am)} durch ${info.durch}${info.grund ? ` – ${info.grund}` : ''}`;
+      const zeileText = `#${punkt.nr} · ${t.anlage} ${punkt.anlageNr} · ${t.geloeschtAmDurch(isoDatumDeutsch(info.am), info.durch)}${info.grund ? ` – ${info.grund}` : ''}`;
       const zeilen: string[] = doc.splitTextToSize(zeileText, INHALT_BREITE);
       platzPruefen(zeilen.length * 5 + 2);
       doc.setFont('helvetica', 'normal');
@@ -276,7 +271,7 @@ export async function berichtAlsPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
     doc.setTextColor(92, 102, 114);
-    doc.text(`Seite ${i} von ${seitenAnzahl}`, RAND, fussOben + 5);
+    doc.text(t.seite(i, seitenAnzahl), RAND, fussOben + 5);
     doc.text(`${bericht.ersteller} · ${formatDeutsch(bericht.datum)}`, SEITE_BREITE - RAND, fussOben + 5, {
       align: 'right',
     });
