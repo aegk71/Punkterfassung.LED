@@ -1,5 +1,6 @@
 <script lang="ts">
   import { db, punktWiederherstellen, berichtHartLoeschen } from '../lib/db';
+  import { holeEingeklappt, setzeEingeklappt } from '../lib/anlagenKlappZustand';
   import type { Bericht, Foto, Punkt } from '../lib/model';
   import { texte } from '../lib/texte/de';
   import { naturalCompare } from '../lib/naturalSort';
@@ -75,13 +76,22 @@
 
   let punktIdsGeordnet = $derived(gruppen.flatMap((g) => g.punkte.filter((p) => !p.geloescht).map((p) => p.id)));
 
-  let eingeklappt = $state<Set<string>>(new Set());
+  let eingeklappt = $state<Set<string>>(holeEingeklappt(berichtId));
 
   function anlageUmschalten(anlageNr: string) {
     const neu = new Set(eingeklappt);
     if (neu.has(anlageNr)) neu.delete(anlageNr);
     else neu.add(anlageNr);
     eingeklappt = neu;
+    setzeEingeklappt(berichtId, neu);
+  }
+
+  let alleEingeklappt = $derived(gruppen.length > 0 && gruppen.every((g) => eingeklappt.has(g.anlageNr)));
+
+  function alleUmschalten() {
+    const neu = alleEingeklappt ? new Set<string>() : new Set(gruppen.map((g) => g.anlageNr));
+    eingeklappt = neu;
+    setzeEingeklappt(berichtId, neu);
   }
 
   async function statusUmschalten() {
@@ -317,6 +327,11 @@
     {#if gruppen.length === 0}
       <p class="hinweis">{texte.berichtUebersicht.keinePunkte}</p>
     {:else}
+      <div class="anlagen-kopfzeile">
+        <button class="btn btn-secondary btn-klein" onclick={alleUmschalten}>
+          {alleEingeklappt ? texte.berichtUebersicht.alleAufklappen : texte.berichtUebersicht.alleZuklappen}
+        </button>
+      </div>
       {#each gruppen as gruppe (gruppe.anlageNr)}
         <section class="anlage-gruppe">
           <button
@@ -536,6 +551,12 @@
     background: var(--navy);
     border-color: var(--navy);
     color: #fff;
+  }
+
+  .anlagen-kopfzeile {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
   }
 
   .anlage-gruppe {

@@ -103,6 +103,8 @@ export const texte = {
     filterErledigt: 'Erledigt',
     filterGeloescht: 'Gelöscht',
     keinePunkte: 'Noch keine Punkte erfasst.',
+    alleAufklappen: 'Alle aufklappen',
+    alleZuklappen: 'Alle zuklappen',
     wiederherstellen: 'Wiederherstellen',
     fotos: 'Fotos',
     export: 'Export',
