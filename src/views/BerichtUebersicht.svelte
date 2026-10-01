@@ -13,7 +13,7 @@
     onZurueck: () => void;
     onBearbeiten: (berichtId: string) => void;
     onNeuerPunkt: (berichtId: string) => void;
-    onPunktOeffnen: (berichtId: string, punktId: string) => void;
+    onPunktOeffnen: (berichtId: string, punktId: string, punktIds: string[]) => void;
   } = $props();
 
   type Filter = 'alle' | 'offen' | 'in_bearbeitung' | 'erledigt' | 'geloescht';
@@ -72,6 +72,17 @@
     ergebnis.sort((a, b) => naturalCompare(a.anlageNr, b.anlageNr));
     return ergebnis;
   });
+
+  let punktIdsGeordnet = $derived(gruppen.flatMap((g) => g.punkte.filter((p) => !p.geloescht).map((p) => p.id)));
+
+  let eingeklappt = $state<Set<string>>(new Set());
+
+  function anlageUmschalten(anlageNr: string) {
+    const neu = new Set(eingeklappt);
+    if (neu.has(anlageNr)) neu.delete(anlageNr);
+    else neu.add(anlageNr);
+    eingeklappt = neu;
+  }
 
   async function statusUmschalten() {
     if (!bericht) return;
@@ -303,29 +314,39 @@
     {:else}
       {#each gruppen as gruppe (gruppe.anlageNr)}
         <section class="anlage-gruppe">
-          <h2 class="section-label">Anlage {gruppe.anlageNr}</h2>
-          <ul class="punkte-liste">
-            {#each gruppe.punkte as punkt (punkt.id)}
-              <li class="card punkt-zeile" class:geloescht={!!punkt.geloescht}>
-                <button
-                  class="punkt-inhalt"
-                  disabled={!!punkt.geloescht}
-                  onclick={() => onPunktOeffnen(berichtId, punkt.id)}
-                >
-                  <span class="punkt-nr">#{punkt.nr}</span>
-                  <ZiffernblattSymbol lage={punkt.lage} groesse={22} />
-                  <span class="punkt-bg">{punkt.baugruppeName}</span>
-                  <span class="badge badge-{punkt.geloescht ? 'geloescht' : punkt.status}">{statusText(punkt)}</span>
-                  <span class="punkt-fotos">{fotosProPunkt[punkt.id] ?? 0} {texte.berichtUebersicht.fotos}</span>
-                </button>
-                {#if punkt.geloescht}
-                  <button class="btn btn-secondary btn-klein wiederherstellen-btn" onclick={() => wiederherstellen(punkt.id)}>
-                    {texte.berichtUebersicht.wiederherstellen}
+          <button
+            class="section-label anlage-kopf"
+            onclick={() => anlageUmschalten(gruppe.anlageNr)}
+            aria-expanded={!eingeklappt.has(gruppe.anlageNr)}
+          >
+            <span class="anlage-chevron">{eingeklappt.has(gruppe.anlageNr) ? '▸' : '▾'}</span>
+            <span>Anlage {gruppe.anlageNr}</span>
+            <span class="anlage-anzahl">({gruppe.punkte.length})</span>
+          </button>
+          {#if !eingeklappt.has(gruppe.anlageNr)}
+            <ul class="punkte-liste">
+              {#each gruppe.punkte as punkt (punkt.id)}
+                <li class="card punkt-zeile" class:geloescht={!!punkt.geloescht}>
+                  <button
+                    class="punkt-inhalt"
+                    disabled={!!punkt.geloescht}
+                    onclick={() => onPunktOeffnen(berichtId, punkt.id, punktIdsGeordnet)}
+                  >
+                    <span class="punkt-nr">#{punkt.nr}</span>
+                    <ZiffernblattSymbol lage={punkt.lage} groesse={22} />
+                    <span class="punkt-bg">{punkt.baugruppeName}</span>
+                    <span class="badge badge-{punkt.geloescht ? 'geloescht' : punkt.status}">{statusText(punkt)}</span>
+                    <span class="punkt-fotos">{fotosProPunkt[punkt.id] ?? 0} {texte.berichtUebersicht.fotos}</span>
                   </button>
-                {/if}
-              </li>
-            {/each}
-          </ul>
+                  {#if punkt.geloescht}
+                    <button class="btn btn-secondary btn-klein wiederherstellen-btn" onclick={() => wiederherstellen(punkt.id)}>
+                      {texte.berichtUebersicht.wiederherstellen}
+                    </button>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
         </section>
       {/each}
     {/if}
@@ -504,6 +525,30 @@
 
   .anlage-gruppe {
     margin-bottom: 24px;
+  }
+
+  .anlage-kopf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 6px 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .anlage-chevron {
+    flex: 0 0 auto;
+    width: 14px;
+  }
+
+  .anlage-anzahl {
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
   }
 
   .punkte-liste {

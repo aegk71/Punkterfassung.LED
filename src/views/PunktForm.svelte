@@ -16,11 +16,17 @@
     erstelltAm: string;
   }
 
-  let { berichtId, punktId, onFertig }: {
+  let { berichtId, punktId, punktIds = [], onFertig, onNavigieren }: {
     berichtId: string;
     punktId: string | null;
+    punktIds?: string[];
     onFertig: () => void;
+    onNavigieren?: (punktId: string) => void;
   } = $props();
+
+  let aktuellerIndex = $derived(punktId ? punktIds.indexOf(punktId) : -1);
+  let hatVorherigen = $derived(aktuellerIndex > 0);
+  let hatNaechsten = $derived(aktuellerIndex !== -1 && aktuellerIndex < punktIds.length - 1);
 
   let modusBearbeiten = $derived(punktId !== null);
 
@@ -206,9 +212,9 @@
     }
   }
 
-  async function speichernBearbeiten() {
+  async function speichernBearbeitenAktuell(): Promise<boolean> {
     versuchtGespeichert = true;
-    if (!vollstaendig || !lage || !bestehenderPunkt) return;
+    if (!vollstaendig || !lage || !bestehenderPunkt) return false;
 
     const baugruppe = baugruppenAktiv.find((b) => b.id === baugruppeId);
     const aktualisiert: Punkt = {
@@ -257,7 +263,30 @@
       }
     });
 
-    onFertig();
+    return true;
+  }
+
+  async function speichernBearbeiten() {
+    const erfolgreich = await speichernBearbeitenAktuell();
+    if (erfolgreich) onFertig();
+  }
+
+  async function zuPunkt(richtung: 'zurueck' | 'weiter') {
+    if (!onNavigieren) return;
+    const erfolgreich = await speichernBearbeitenAktuell();
+    if (!erfolgreich) return;
+    const zielIndex = aktuellerIndex + (richtung === 'weiter' ? 1 : -1);
+    const zielId = punktIds[zielIndex];
+    if (zielId) onNavigieren(zielId);
+  }
+
+  let kopiertSichtbar = $state(false);
+
+  async function anmerkungKopieren() {
+    if (!anmerkung) return;
+    await navigator.clipboard.writeText(anmerkung);
+    kopiertSichtbar = true;
+    setTimeout(() => (kopiertSichtbar = false), 1500);
   }
 
   let loeschenBestaetigenSichtbar = $state(false);
@@ -295,6 +324,26 @@
         </p>
       {/if}
     </div>
+    {#if modusBearbeiten && onNavigieren && punktIds.length > 1}
+      <div class="punkt-nav">
+        <button
+          class="btn btn-secondary btn-klein"
+          onclick={() => zuPunkt('zurueck')}
+          disabled={!hatVorherigen}
+          aria-label={texte.punktForm.vorherigerPunkt}
+        >
+          ‹
+        </button>
+        <button
+          class="btn btn-secondary btn-klein"
+          onclick={() => zuPunkt('weiter')}
+          disabled={!hatNaechsten}
+          aria-label={texte.punktForm.naechsterPunkt}
+        >
+          ›
+        </button>
+      </div>
+    {/if}
   </header>
 
   {#if geladen}
@@ -341,7 +390,18 @@
       </div>
 
       <label>
-        {texte.punktForm.anmerkung}
+        <span class="anmerkung-kopf">
+          {texte.punktForm.anmerkung}
+          <button
+            type="button"
+            class="anmerkung-kopieren"
+            onclick={anmerkungKopieren}
+            disabled={!anmerkung}
+            aria-label={texte.punktForm.anmerkungKopieren}
+          >
+            {kopiertSichtbar ? texte.punktForm.kopiert : '⧉'}
+          </button>
+        </span>
         <textarea bind:value={anmerkung} rows="3"></textarea>
       </label>
 
@@ -417,6 +477,19 @@
   .titel-block {
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .punkt-nav {
+    display: flex;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .punkt-nav .btn {
+    min-width: 40px;
+    padding: 0 10px;
+    font-size: 18px;
+    line-height: 1;
   }
 
   .page-head h1 {
@@ -566,6 +639,29 @@
 
   textarea {
     resize: vertical;
+  }
+
+  .anmerkung-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .anmerkung-kopieren {
+    background: none;
+    border: 0;
+    padding: 2px 6px;
+    min-height: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    cursor: pointer;
+  }
+
+  .anmerkung-kopieren:disabled {
+    color: var(--muted);
+    cursor: default;
   }
 
   .fehler {
