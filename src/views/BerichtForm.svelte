@@ -16,6 +16,7 @@
   let naechstePunktNrBestehend = 1;
   let statusBestehend: Bericht['status'] = 'offen';
 
+  let titel = $state('');
   let projektNr = $state('');
   let projektName = $state('');
   let vorgang = $state('');
@@ -46,6 +47,7 @@
         erstelltAmBestehend = bericht.erstelltAm;
         naechstePunktNrBestehend = bericht.naechstePunktNr;
         statusBestehend = bericht.status;
+        titel = bericht.titel ?? '';
         projektNr = bericht.projektNr;
         projektName = bericht.projektName;
         vorgang = bericht.vorgang;
@@ -73,6 +75,7 @@
     const jetzt = new Date().toISOString();
     const bericht: Bericht = {
       id: idBestehend ?? crypto.randomUUID(),
+      titel: titel.trim() || undefined,
       projektNr: projektNr.trim(),
       projektName: projektName.trim(),
       vorgang: vorgang.trim(),
@@ -102,6 +105,10 @@
 
   {#if geladen}
     <form class="formular" onsubmit={(e) => { e.preventDefault(); speichern(); }}>
+      <label>
+        {texte.berichtForm.titel}
+        <input type="text" bind:value={titel} placeholder={texte.berichtForm.titelPlatzhalter} />
+      </label>
       <label>
         {texte.berichtForm.projektNr}
         <input type="text" bind:value={projektNr} required />

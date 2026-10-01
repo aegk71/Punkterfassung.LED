@@ -153,9 +153,14 @@
           <li>
             <button class="card karte" onclick={() => onOeffnen(bericht.id)}>
               <div class="karte-kopf">
-                <span class="karte-titel">{bericht.projektNr} · {bericht.projektName}</span>
+                <span class="karte-titel">
+                  {bericht.titel || `${bericht.projektNr} · ${bericht.projektName}`}
+                </span>
                 <span class="karte-datum">{formatDeutsch(bericht.datum)}</span>
               </div>
+              {#if bericht.titel}
+                <p class="karte-unterzeile">{bericht.projektNr} · {bericht.projektName}</p>
+              {/if}
               <p class="karte-vorgang">{bericht.vorgang}</p>
               <div class="karte-badges">
                 <span class="badge badge-offen">{zaehlerProBericht[bericht.id]?.offen ?? 0} {texte.berichtsliste.punkteOffen}</span>
@@ -283,6 +288,12 @@
     color: var(--muted);
     font-size: 14px;
     white-space: nowrap;
+  }
+
+  .karte-unterzeile {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 4px;
   }
 
   .karte-vorgang {

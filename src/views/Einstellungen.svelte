@@ -29,7 +29,7 @@
 
   async function speichern() {
     if (!einstellungen) return;
-    await db.einstellungen.put(einstellungen);
+    await db.einstellungen.put($state.snapshot(einstellungen));
   }
 
   function erstellerGeaendert(wert: string) {

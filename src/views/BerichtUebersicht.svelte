@@ -213,7 +213,12 @@
   <header class="page-head">
     <button class="btn btn-secondary" onclick={onZurueck}>{texte.berichtUebersicht.zurueck}</button>
     {#if bericht}
-      <h1>{bericht.projektNr} · {bericht.projektName} · {bericht.vorgang}</h1>
+      <div class="titel-block">
+        <h1>{bericht.titel || `${bericht.projektNr} · ${bericht.projektName} · ${bericht.vorgang}`}</h1>
+        {#if bericht.titel}
+          <p class="bericht-kontext">{bericht.projektNr} · {bericht.projektName} · {bericht.vorgang}</p>
+        {/if}
+      </div>
     {/if}
   </header>
 
@@ -395,10 +400,20 @@
     margin-bottom: 12px;
   }
 
-  .page-head h1 {
-    font-size: 18px;
+  .titel-block {
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .page-head h1 {
+    font-size: 18px;
+    overflow-wrap: break-word;
+  }
+
+  .bericht-kontext {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
     overflow-wrap: break-word;
   }
 

@@ -21,6 +21,8 @@ export const texte = {
   berichtForm: {
     titelNeu: 'Neuer Bericht',
     titelBearbeiten: 'Bericht bearbeiten',
+    titel: 'Titel',
+    titelPlatzhalter: 'z. B. Kurzbezeichnung des Berichts (optional)',
     projektNr: 'Projekt-Nr.',
     projektName: 'Projektname',
     vorgang: 'Vorgang',

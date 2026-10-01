@@ -18,6 +18,7 @@ export interface Einstellungen {
 
 export interface Bericht {
   id: string;
+  titel?: string;
   projektNr: string;
   projektName: string;
   vorgang: string;
